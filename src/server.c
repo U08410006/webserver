@@ -40,7 +40,7 @@ static void handlePacket(Server *server, int fd, struct sockaddr_in *sin) {
     char reqPacket[20480];
     recv(fd, reqPacket, sizeof(reqPacket), 0);
     printf("\n==========%s\n=========\n",reqPacket);
-    if(strstr(reqPacket,"boundary")){
+/*    if(strstr(reqPacket,"boundary")){
 	char* boundary = "-----------------------------";
 	int b_len = strlen(boundary);
         printf("\ngogo!!\n");
@@ -63,7 +63,7 @@ static void handlePacket(Server *server, int fd, struct sockaddr_in *sin) {
 	fwrite(bound, strlen(bound), sizeof(char), f);
 	fclose(f);
     }
-    Request *request = requestNew(reqPacket, sin);
+*/    Request *request = requestNew(reqPacket, sin);
     Response *response = execHandler(server, request);
 
     char *resPacket = responsePacket(response);
