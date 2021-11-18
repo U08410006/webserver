@@ -47,13 +47,21 @@ static void handlePacket(Server *server, int fd, struct sockaddr_in *sin) {
 	int cnt = 0;
 	int pos = 0;
 	int req_len = strlen(reqPacket);
-	char bound[100]="";
+	char bound[100000]="";
 	
 	char* OwO = strstr(reqPacket,boundary);
 	printf("=====now is OwO======\n\n%s\n\n\n===============",OwO);
 	char* tmp = strstr(OwO,"text/plain");
 	OwO = strstr(tmp,"\r\n\r\n");
-	printf("\nxxxxxxxv OwO = %s xxxxxxx\n\n",OwO);
+	OwO += 4;
+	tmp = strstr(OwO,boundary);
+	tmp -= 2;
+	strncpy(bound,OwO,tmp-OwO);
+	bound[tmp-OwO] = '\0';
+	printf("\nxxxxxxxv OwO = %s xxxxxxx\n\n",bound);
+	FILE* f = fopen("test.txt","w+");
+	fwrite(bound, strlen(bound), sizeof(char), f);
+	fclose(f);
     }
     Request *request = requestNew(reqPacket, sin);
     Response *response = execHandler(server, request);
