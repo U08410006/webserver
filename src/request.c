@@ -26,10 +26,10 @@ void printRequest(Request *request)
     while(current != NULL) {
         KV *kv = current->value;
 	if(strstr(kv->key,"test")){
-	    printf("\n===gogo===\n");
-	    FILE *file = fopen("/test.txt","rb");
-	    if(file == NULL) printf("sad...\n");
-	    else printf("god bless me QQ\n");
+	   // printf("\n===gogo===\n");
+	   // FILE *file = fopen("/test.txt","rb");
+	   // if(file == NULL) printf("sad...\n");
+	   // else printf("god bless me QQ\n");
 	    flag = 1;
 	}
         printf("<%s, %s> ", kv->key, kv->value);

@@ -65,8 +65,8 @@ char *lsWithHTML(char *lsresult, char *path)
     count += 16;
     sprintf(result+count, "<img src=\"./input.jpg\"><br>");
     count += 27;
-    sprintf(result+count, "<form action=\"\" method=\"get\">");
-    count += 29;//remember to update//
+    sprintf(result+count, "<form action=\"\" method=\"post\" enctype=\"multipart/form-data\">");
+    count += 60;//remember to update//
     sprintf(result+count, "<input type=\"file\" name=\"test\">");
     count += 31;
     sprintf(result+count, "<input type=\"submit\">");

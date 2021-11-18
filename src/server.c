@@ -39,6 +39,22 @@ static void handlePacket(Server *server, int fd, struct sockaddr_in *sin) {
     printConnectInfo(sin);
     char reqPacket[20480];
     recv(fd, reqPacket, sizeof(reqPacket), 0);
+    printf("\n==========%s\n=========\n",reqPacket);
+    if(strstr(reqPacket,"boundary")){
+	char* boundary = "-----------------------------";
+	int b_len = strlen(boundary);
+        printf("\ngogo!!\n");
+	int cnt = 0;
+	int pos = 0;
+	int req_len = strlen(reqPacket);
+	char bound[100]="";
+	
+	char* OwO = strstr(reqPacket,boundary);
+	printf("=====now is OwO======\n\n%s\n\n\n===============",OwO);
+	char* tmp = strstr(OwO,"text/plain");
+	OwO = strstr(tmp,"\r\n\r\n");
+	printf("\nxxxxxxxv OwO = %s xxxxxxx\n\n",OwO);
+    }
     Request *request = requestNew(reqPacket, sin);
     Response *response = execHandler(server, request);
 
@@ -102,7 +118,7 @@ void serverServe(Server *server)
 	//char buff[file_MAX+5];
         //if(read(pfd, buff, file_MAX) == -1){
 	//    printf("=======read error=======\n");
-	//}
+//	}
 	//printf("=======================\n\n%s\n\n==================\n",buff);
 	if((pid = fork()) < 0) perror("fork");
         else if(pid == 0) {
