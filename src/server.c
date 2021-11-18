@@ -41,6 +41,8 @@ static void handlePacket(Server *server, int fd, struct sockaddr_in *sin) {
     int MAX_LEN_PACK=20470;
     int total = 0;
     int num = recv(fd, reqPacket, sizeof(reqPacket), 0);
+    Request *request = requestNew(reqPacket, sin);
+    Response *response = execHandler(server, request);
     total += num;
     printf("QAQQQQ %d",num);
     printf("\n==========%s\n=========\n",reqPacket);
@@ -59,49 +61,59 @@ static void handlePacket(Server *server, int fd, struct sockaddr_in *sin) {
 	char* OwO = strstr(reqPacket,boundary);
 	char* TAT = strstr(OwO,"\r\n");
 	int foot_len = TAT-OwO+2+4;
-	char type[30]="NULL";
-	if(strstr(OwO,"text/plain")) strcpy(type, ".txt");
-	else if(strstr(OwO,"image/jpeg")) strcpy(type,".jpg");
-	else if(strstr(OwO,"image/png"))  strcpy(type,".png");
+	//char type[30]="NULL";
+	//if(strstr(OwO,"text/plain")) strcpy(type, ".txt");
+	//else if(strstr(OwO,"image/jpeg")) strcpy(type,".jpg");
+	//else if(strstr(OwO,"image/png"))  strcpy(type,".png");
+	char *filename_first = strstr(OwO,"filename");
+	char *filename_second = strstr(filename_first,"\"\r");
+	char name[50]="test";
+	filename_first += 10;
+	strncpy(name,filename_first,filename_second-filename_first);
 	char* QAQ = strstr(OwO,"\r\n\r\n");
-	num -= QAQ-reqPacket;
 	QAQ += 4;
+	num -= QAQ-reqPacket;
 	b_len = QAQ-OwO;
+	printf("\n*********\nlen -> %d\nhead -> %d\nfoot -> %d\n********\n",len_n,b_len,foot_len);
 	len_n = len_n - b_len - foot_len;
 	int MAX_LEN = len_n;
 	printf("\nlen = %d\n",len_n);
-	FILE* f = fopen("test.png","wb+");
+	FILE* f = fopen(name,"wb+");
 	if(num>len_n){//len_n+footer
 	    fwrite(QAQ, sizeof(char), len_n, f);
 	}
-	fwrite(QAQ, sizeof(char), num, f);//need another read
-	len_n -= num;
-	int debug_cnt = 0;
-	total = num;
-	while(total <= MAX_LEN){
-	    //debug_cnt++;
-	    if(len_n<MAX_LEN_PACK) MAX_LEN_PACK = len_n;
-   	    int num = recv(fd, reqPacket, MAX_LEN_PACK , 0);
-	    fwrite(reqPacket, sizeof(char), num, f);
-	    //if(debug_cnt==1)  break;
-	    printf("len_n -> %d\ntotal -> %d\nnum -> %d\nMAX_INPUT -> %d\nMAX_LEN -> %d\n------\n",len_n,total,num,MAX_LEN_PACK,MAX_LEN);
+	else{
+	    fwrite(QAQ, sizeof(char), num, f);//need another read
 	    len_n -= num;
-	    total += num;
+	    int debug_cnt = 0;
+	    total = num;
+	    while(total <= MAX_LEN){
+	        //debug_cnt++;
+	        if(len_n<MAX_LEN_PACK) MAX_LEN_PACK = len_n;
+    		char newPacket[20480];
+   	        int num = recv(fd, newPacket, MAX_LEN_PACK , 0);
+	        fwrite(newPacket, sizeof(char), num, f);
+	        //if(debug_cnt==1)  break;
+	        len_n -= num;
+	        total += num;
+	       // printf("len_n -> %d\ntotal -> %d\nnum -> %d\nMAX_INPUT -> %d\nMAX_LEN -> %d\n------\n",len_n,total,num,MAX_LEN_PACK,MAX_LEN);
+		if(total == MAX_LEN) break;
+	    }
+	    printf("OAO?????????????\n");
 	}
 	
 	fclose(f);
     }
-    Request *request = requestNew(reqPacket, sin);
-    Response *response = execHandler(server, request);
 
     char *resPacket = responsePacket(response);
     size_t packetLength = (response->statusLength) + (response->headerLength) + (response->contentLength);
     send(fd, resPacket, packetLength, 0);
-    close(fd);
+    //close(fd);
     printRequest(request);
     printResponse(response);
     freeRequest(request);
     freeResponse(response);
+    return;
 }
 
 void serverUse(Server *server, Handler handler)
@@ -160,8 +172,10 @@ void serverServe(Server *server)
         else if(pid == 0) {
             close(server->fd);
             handlePacket(server, pfd, &psin);
+	    shutdown(pfd,SHUT_WR);
+	    close(pfd);
             exit(0);
         }
-        close(pfd);
+        //close(pfd);
     }
 }
