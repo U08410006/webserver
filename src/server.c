@@ -38,32 +38,60 @@ static void printConnectInfo(struct sockaddr_in *sin)
 static void handlePacket(Server *server, int fd, struct sockaddr_in *sin) {
     printConnectInfo(sin);
     char reqPacket[20480];
-    recv(fd, reqPacket, sizeof(reqPacket), 0);
+    int MAX_LEN_PACK=20470;
+    int total = 0;
+    int num = recv(fd, reqPacket, sizeof(reqPacket), 0);
+    total += num;
+    printf("QAQQQQ %d",num);
     printf("\n==========%s\n=========\n",reqPacket);
-/*    if(strstr(reqPacket,"boundary")){
+
+    if(strstr(reqPacket,"boundary")){
 	char* boundary = "-----------------------------";
 	int b_len = strlen(boundary);
-        printf("\ngogo!!\n");
 	int cnt = 0;
-	int pos = 0;
-	int req_len = strlen(reqPacket);
-	char bound[100000]="";
-	
+	int req_len;
+	char * len_pos_f = strstr(reqPacket,"Content-Length");
+	char * len_pos_e = strstr(len_pos_f,"\r\n");
+	len_pos_f+=16;
+	char len[20];
+	strncpy(len,len_pos_f,len_pos_e-len_pos_f);
+	int len_n = atoi(len);
 	char* OwO = strstr(reqPacket,boundary);
-	printf("=====now is OwO======\n\n%s\n\n\n===============",OwO);
-	char* tmp = strstr(OwO,"text/plain");
-	OwO = strstr(tmp,"\r\n\r\n");
-	OwO += 4;
-	tmp = strstr(OwO,boundary);
-	tmp -= 2;
-	strncpy(bound,OwO,tmp-OwO);
-	bound[tmp-OwO] = '\0';
-	printf("\nxxxxxxxv OwO = %s xxxxxxx\n\n",bound);
-	FILE* f = fopen("test.txt","w+");
-	fwrite(bound, strlen(bound), sizeof(char), f);
+	char* TAT = strstr(OwO,"\r\n");
+	int foot_len = TAT-OwO+2+4;
+	char type[30]="NULL";
+	if(strstr(OwO,"text/plain")) strcpy(type, ".txt");
+	else if(strstr(OwO,"image/jpeg")) strcpy(type,".jpg");
+	else if(strstr(OwO,"image/png"))  strcpy(type,".png");
+	char* QAQ = strstr(OwO,"\r\n\r\n");
+	num -= QAQ-reqPacket;
+	QAQ += 4;
+	b_len = QAQ-OwO;
+	len_n = len_n - b_len - foot_len;
+	int MAX_LEN = len_n;
+	printf("\nlen = %d\n",len_n);
+	FILE* f = fopen("test.png","wb+");
+	if(num>len_n){//len_n+footer
+	    fwrite(QAQ, sizeof(char), len_n, f);
+	}
+	fwrite(QAQ, sizeof(char), num, f);//need another read
+	len_n -= num;
+	int debug_cnt = 0;
+	total = num;
+	while(total <= MAX_LEN){
+	    //debug_cnt++;
+	    if(len_n<MAX_LEN_PACK) MAX_LEN_PACK = len_n;
+   	    int num = recv(fd, reqPacket, MAX_LEN_PACK , 0);
+	    fwrite(reqPacket, sizeof(char), num, f);
+	    //if(debug_cnt==1)  break;
+	    printf("len_n -> %d\ntotal -> %d\nnum -> %d\nMAX_INPUT -> %d\nMAX_LEN -> %d\n------\n",len_n,total,num,MAX_LEN_PACK,MAX_LEN);
+	    len_n -= num;
+	    total += num;
+	}
+	
 	fclose(f);
     }
-*/    Request *request = requestNew(reqPacket, sin);
+    Request *request = requestNew(reqPacket, sin);
     Response *response = execHandler(server, request);
 
     char *resPacket = responsePacket(response);
