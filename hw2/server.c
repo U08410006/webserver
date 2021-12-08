@@ -172,9 +172,10 @@ void receive_send(int n)
 	char message[MAXLINE];
 	char password[MAXLINE];
 
-	char msg1[] 			= " <Server> Who do you want to send?\n";
+	char msg1[] 		= " <Server> Who do you want to send?\n";
 	char msg_play_with[] 	= " <Server> Which player do you want to play with: \n";
-	char msg_reply[] 		= " <Server> Enter Y or y to accept the game with";
+	char msg_reply[] 	= " <Server> Enter Y or y to accept the game with";
+	char msg_sure[]		= " <Server> Are you sure?\n";
 	char msg_reply_reject[] = " <Server> Target player rejected\n";
 	char msg_reply_accept[] = " <Server> Target player accept, game start\n";
 
@@ -255,13 +256,11 @@ void receive_send(int n)
 		if (length > 0)
 		{ //Message received
 			msg_rcv[length] = 0;
-			
-			if((strcmp(msg_rcv, "y") == 0 || strcmp(msg_rcv, "Y") == 0) && (game_state[n] != -1))
-			{
-				send(connect_fd[game_state[n]], msg_rcv, strlen(msg_rcv), 0);
+			if(strncmp(msg_rcv, "y", 1) == 0 || strncmp(msg_rcv, "Y", 1) == 0){
+				send(connect_fd[i], msg_sure, strlen(msg_sure), 0);
 			}
 			// quit
-			if (strncmp(msg_rcv, "quit", 4) == 0 || strncmp(msg_rcv, "/q", 2) == 0)
+			if (strncmp(msg_rcv, "quit", 4) == 0 || strncmp(msg_rcv, "q", 1) == 0)
 			{
 				printf("%s quitted\n", user_name);
 				close(connect_fd[n]);
@@ -326,7 +325,7 @@ void receive_send(int n)
 						// check game state
 						if (game_state[n] == -1 && game_state[i] == -1)
 						{
-							printf("Target player founding...\n");
+							printf("Target player found...\n");
 							send(connect_fd[i], msg_send, strlen(msg_send), 0);
 							target_idx = i;
 							game_state[n] = target_idx;
