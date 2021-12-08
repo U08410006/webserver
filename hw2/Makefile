@@ -1,9 +1,9 @@
-all: client.c server.c
+all: ser_compile cli_compile
 
-ser_comiple:
+ser_compile: server.c
 	gcc server.c -lpthread -o server.exe
 
-cli_comiple:
+cli_compile: client.c
 	gcc client.c -lpthread -o client.exe
 
 rm:

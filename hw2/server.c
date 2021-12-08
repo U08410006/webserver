@@ -9,7 +9,7 @@
 
 #define MAXLINE 512
 #define MAX_MEM 10
-#define NAME_LEN 20
+#define NAME_LEN 100
 #define SERV_PORT 8080
 #define LISTENQ 5
 #define MAX_GAME 5
@@ -19,82 +19,17 @@ int game_state[MAX_MEM];
 int board[MAX_MEM][9];
 char user[MAX_MEM][NAME_LEN];
 
-void usage();
-void server_control();
-int check(int idx);
-void game(int p1, int p2);
-void receive_send(int n);
-
-int main()
-{
-	memset(game_state, -1, sizeof(game_state));
-
-	long i;
-	pthread_t thread;
-	struct sockaddr_in server_addr, client_addr;
-	socklen_t sock_len; // length
-	char buff[MAXLINE];
-
-	// Create server_fd by socket
-	listen_fd = socket(AF_INET, SOCK_STREAM, 0);
-	if (listen_fd < 0)
-	{
-		printf("Socket create failed\n");
-		return -1;
-	}
-
-	// Internet connection setting
-	server_addr.sin_family = AF_INET;		 // IPv4
-	server_addr.sin_port = htons(SERV_PORT); //port80
-	server_addr.sin_addr.s_addr = htonl(INADDR_ANY);
-
-	// notify by bind
-	if (bind(listen_fd, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0)
-	{
-		printf("Bind failed\n");
-		return -1;
-	}
-
-	// listen
-	printf("Listening\n");
-	listen(listen_fd, LISTENQ);
-
-	// create thread to control server
-	pthread_create(&thread, NULL, (void *)(&server_control), NULL);
-	
-	// initialize connet_fd
-	for (i = 0; i < MAX_MEM; i++)
-	{
-		connect_fd[i] = -1;
-	}
-	memset(user, '\0', sizeof(user));
-	printf("Initialize\n");
-
-	// wait for client
-	while (1)
-	{
-		sock_len = sizeof(client_addr);
-		for (i = 0; (i < MAX_MEM) && (connect_fd[i] != -1); i++)
-			; // look for free connect_fd
-		connect_fd[i] = accept(listen_fd, (struct sockaddr *)&client_addr, &sock_len);
-
-		// create threads for client	argument = i to control connect_fd
-		printf("\nWaiting for user name...\n");
-		pthread_create(malloc(sizeof(pthread_t)), NULL, (void *)(&receive_send), (void *)i);
-	}
-
-	return 0;
-}
+char pass[MAX_MEM][NAME_LEN];
 
 void usage()
 {
 	printf("Available number of user is %d\n", MAX_MEM);
 	printf("Maximum user name is %d\n", NAME_LEN);
-	printf("Server port is set to be: %d", SERV_PORT);
+	printf("Server port is set to be: %d\n", SERV_PORT);
 	printf("Maximum meg is %d\n\n", MAXLINE);
 
 	printf("Function Intro:\n");
-	printf("/q, /quit :quit the server\n");
+	printf("q, quit :quit the server\n");
 }
 
 void server_control()
@@ -104,13 +39,13 @@ void server_control()
 	while (1)
 	{
 		scanf("%s", msg);
-		if (strcmp(msg, "/quit") == 0 || strcmp(msg, "/q") == 0)
+		if (strcmp(msg, "quit") == 0 || strcmp(msg, "/q") == 0)
 		{
 			printf("Server closed\n");
 			close(listen_fd);
 			exit(0);
 		}
-		else if (strcmp(msg, "/help") == 0)
+		else if (strcmp(msg, "help") == 0)
 			usage();
 	}
 }
@@ -235,8 +170,9 @@ void receive_send(int n)
 	char target_user[MAXLINE];
 	char user_name[NAME_LEN];
 	char message[MAXLINE];
+	char password[MAXLINE];
 
-	char msg1[] 			= " <Server> Who do you want to send? ";
+	char msg1[] 			= " <Server> Who do you want to send?\n";
 	char msg_play_with[] 	= " <Server> Which player do you want to play with: \n";
 	char msg_reply[] 		= " <Server> Enter Y or y to accept the game with";
 	char msg_reply_reject[] = " <Server> Target player rejected\n";
@@ -244,20 +180,65 @@ void receive_send(int n)
 
 	char game_start[] 		= "<Game> game created!\n";
 
+	char login_success[] = "login_success";
+
 	int i = 0;
 	int target_idx;
 	int retval;
+	int id = n;
 	memset(user_name, '\0', sizeof(user_name));
-
+	int new = 1;
 	// receiving user name from client
 	int length = recv(connect_fd[n], user_name, NAME_LEN, 0);
 	if (length > 0)
 	{								  // receiving succeeded
-		user_name[length - 1] = '\0'; // char is 1 byte
-		strcpy(user[n], user_name);
-		printf("User name: %s\n", user[n]);
+		for(int i = 0; i < MAX_MEM; i++){
+			if(strcmp(user[i], user_name) == 0){
+				printf("you did it!!! num is %d\n",i);
+				id = i;
+				new = 0;
+			}
+		}
+		if(new){
+			if(user_name[length - 1] == '\n') user_name[length - 1] = '\0'; // char is 1 byte
+			strcpy(user[n], user_name);
+			printf("User name: %s num is %d\n", user[n], n);
+		}
+		else{
+			printf("old user: %s\n", user[n]);
+		}
 	}
+	while(1){
+		length = recv(connect_fd[n], password, MAXLINE, 0);
+		if(length > 0){
+	
+			printf("input pass is = %s\n",password);
+			if(new){
+				if (length > 0){
+					strcpy(pass[n], password);
+					printf("pass: %s", pass[n]);
+					send(connect_fd[n], login_success, strlen(login_success), 0);
+				}
+				break;
+			}
+			else{
+				printf("old pass is = %s, input pass is = %s\n",pass[n], password);
+				if(strcmp(pass[id],password) == 0){
+					printf("success!!!!!!!!\n");
+					send(connect_fd[n], login_success, strlen(login_success), 0);
+					break;
+				}
+				else{
+					printf("password error\n");
+				}
+			}
+		}
+		
+	}
+	printf("\n");
+	printf("\n");
 
+	
 	// receiving message from client
 	while (1)
 	{
@@ -280,7 +261,7 @@ void receive_send(int n)
 				send(connect_fd[game_state[n]], msg_rcv, strlen(msg_rcv), 0);
 			}
 			// quit
-			if (strcmp(msg_rcv, "/quit") == 0 || strcmp(msg_rcv, "/q") == 0)
+			if (strncmp(msg_rcv, "quit", 4) == 0 || strncmp(msg_rcv, "/q", 2) == 0)
 			{
 				printf("%s quitted\n", user_name);
 				close(connect_fd[n]);
@@ -288,7 +269,7 @@ void receive_send(int n)
 				pthread_exit(&retval);
 			}
 			// list client name
-			else if (strncmp(msg_rcv, "/list", 5) == 0)
+			else if (strncmp(msg_rcv, "list", 4) == 0)
 			{
 				strcpy(msg_send, "\n<Server> Online:\n");
 				for (i = 0; i < MAX_MEM; i++)
@@ -302,7 +283,7 @@ void receive_send(int n)
 				send(connect_fd[n], msg_send, strlen(msg_send), 0);
 			}
 			// talk to specific user
-			else if (strncmp(msg_rcv, "/chat", 5) == 0)
+			else if (strncmp(msg_rcv, "chat", 4) == 0)
 			{
 				printf("\nprivate message from %s ...\n", user_name);
 				// ask for target user's name
@@ -325,7 +306,7 @@ void receive_send(int n)
 				}
 			}
 			// tic tac toe
-			else if (strncmp(msg_rcv, "/chess", 6) == 0)
+			else if (strncmp(msg_rcv, "game", 4) == 0)
 			{
 				memset(game_state, -1, sizeof(game_state));
 				printf("\n %s create a game with ", user_name);
@@ -385,6 +366,84 @@ void receive_send(int n)
 				game(n, target_idx);
 				printf("%s vs %s Game terminated ...\n", user_name, target_user);
 			}
+			// talk to everyone
+			// else
+			// {
+			// 	strcpy(msg_send, user_name);
+			// 	strcat(msg_send, ": ");
+			// 	strcat(msg_send, msg_rcv);
+
+			// 	for (i = 0; i < MAX_MEM; i++)
+			// 	{
+			// 		if (connect_fd[i] != -1 && strcmp(user_name, user[i]) != 0)
+			// 		{ // client exist
+			// 			send(connect_fd[i], msg_send, strlen(msg_send), 0);
+			// 		}
+			// 	}
+			// }
 		}
 	}
 }
+
+int main()
+{
+	memset(game_state, -1, sizeof(game_state));
+
+	long i;
+	pthread_t thread;
+	struct sockaddr_in server_addr, client_addr;
+	socklen_t sock_len; // length
+	char buff[MAXLINE];
+
+	// Create server_fd by socket
+	listen_fd = socket(AF_INET, SOCK_STREAM, 0);
+	if (listen_fd < 0)
+	{
+		printf("Socket create failed\n");
+		return -1;
+	}
+
+	// Internet connection setting
+	server_addr.sin_family = AF_INET;		 // IPv4
+	server_addr.sin_port = htons(SERV_PORT); //port80
+	server_addr.sin_addr.s_addr = htonl(INADDR_ANY);
+	int socket_buffer;
+    	setsockopt(listen_fd,SOL_SOCKET,SO_REUSEADDR,&socket_buffer,sizeof(socket_buffer));
+	// notify by bind
+	if (bind(listen_fd, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0)
+	{
+		printf("Bind failed\n");
+		return -1;
+	}
+
+	// listen
+	printf("Listening\n");
+	listen(listen_fd, LISTENQ);
+
+	// create thread to control server
+	pthread_create(&thread, NULL, (void *)(&server_control), NULL);
+	usage();
+	// initialize connet_fd
+	for (i = 0; i < MAX_MEM; i++)
+	{
+		connect_fd[i] = -1;
+	}
+	memset(user, '\0', sizeof(user));
+	printf("Initialize\n");
+
+	// wait for client
+	while (1)
+	{
+		sock_len = sizeof(client_addr);
+		for (i = 0; (i < MAX_MEM) && (connect_fd[i] != -1); i++)
+			; // look for free connect_fd
+		connect_fd[i] = accept(listen_fd, (struct sockaddr *)&client_addr, &sock_len);
+
+		// create threads for client	argument = i to control connect_fd
+		printf("\nWaiting for user name...\n");
+		pthread_create(malloc(sizeof(pthread_t)), NULL, (void *)(&receive_send), (void *)i);
+	}
+
+	return 0;
+}
+

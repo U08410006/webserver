@@ -13,17 +13,12 @@
 
 #define MAX_LINE 1024
 #define MAX_USERNAME 25
-
-void print_board();
-void *server_connect(int socket_fd, struct sockaddr_in *address);
-void *receive_data(void *data_ptr);
-void send_mesg(char *cmd_line, int socket_fd, struct sockaddr_in *address, char *user_name);
-
 char usage[] = "\Command List:\n"
-               "/q, /quit: quit\n"
-	           "/list : list all user\n"
-	           "/chat : chat to specific user\n"
-	           "/chess : play tic tac toe to specific user\n";
+               "q, quit: quit\n"
+	           "list : list all user\n"
+		   "help : show the command\n"
+	           "chat : chat to specific user\n"
+	           "game : play tic tac toe to specific user\n";
 typedef struct thread_data thread_data;
 struct thread_data
 {
@@ -31,55 +26,8 @@ struct thread_data
     char cmd_line[MAX_USERNAME + 1];
 };
 
+int login_flag = 0;
 int board[9];
-
-int main(int argc, char **argv)
-{
-    long port = strtol(argv[2], NULL, 10);
-    struct sockaddr_in address, client_addr;
-    char *server_addr;
-    char user_name[MAX_USERNAME];
-    char password[MAX_USERNAME];
-    char cmd_line[MAX_USERNAME + 1];
-
-    if(argc < 3)
-    {
-        printf("usage: .\\server.exe <IP> <PORT>\n");
-        exit(0);
-    }
-
-    printf("Please enter your Username : ");
-    scanf("%s", user_name);
-    printf("Please enter your password : ");
-    scanf("%s", password);
-    strcpy(cmd_line, user_name);
-    strcat(cmd_line, ">");
-
-	bzero(&address, sizeof(address));
-    	server_addr = argv[1];
-	address.sin_family = AF_INET;
-	address.sin_addr.s_addr = inet_addr(server_addr);
-	address.sin_port = htons(port);
-	int socket_fd = socket(AF_INET, SOCK_STREAM, 0);
-	server_connect(socket_fd, &address);
-
-    thread_data data;
-    strcpy(data.cmd_line, cmd_line);
-    data.socket_fd = socket_fd;
-
-
-    pthread_t thread;
-	pthread_create(&thread, NULL, (void *)receive_data, (void *)&data);
-
-    send_mesg(cmd_line, socket_fd, &address, user_name);
-
-    printf("closed client\n");
-    close(socket_fd);
-    pthread_exit(NULL);
-    
-    exit(0);
-}
-
 void print_board()
 {
 	char char_board[9];
@@ -140,7 +88,11 @@ void *receive_data(void *data_ptr)
         else
         {
             server_mesg[response] = 0;
-            if(!in_game)
+	    if(!login_flag){
+		    if(strncmp("login_success", server_mesg, 13) == 0)
+			    login_flag = 1;
+	    }
+	    else if(!in_game)
             {
                 printf("%s", server_mesg);
                 if(strncmp("<Game>", server_mesg, 6) == 0)
@@ -185,16 +137,33 @@ void send_mesg(char *cmd_line, int socket_fd, struct sockaddr_in *address, char 
 	memset(buff, '\0', sizeof(buff));
 
 	send(socket_fd, user_name, strlen(user_name), 0);
+	printf("please input password: ");
+	char pass[MAX_LINE];
+	scanf("%s",pass);
+	//fgets(pass, MAX_LINE, stdin);
+	send(socket_fd, pass, strlen(pass), 0);
+	sleep(1);
+	while(!login_flag){
+		printf("password is wrong, please try again!\n");
+		scanf("%s",pass);
+		//fgets(pass, MAX_LINE, stdin);
+		send(socket_fd, pass, strlen(pass), 0);
+	}
+
+	printf("===============================\n");
+	printf("%s",usage);
+	printf("===============================\n");
 
 	while (fgets(client_mesg, MAX_LINE, stdin) != NULL)
 	{
 		printf("%s", cmd_line);
-		if ((strncmp(client_mesg, "/quit", 5) == 0) || (strncmp(client_mesg, "/q", 2) == 0))
+		if ((strncmp(client_mesg, "quit", 4) == 0) || (strncmp(client_mesg, "q", 1) == 0))
 		{
+			send(socket_fd, client_mesg, strlen(client_mesg), 0);
 			printf("Close connection...\n");
 			exit(0);
 		}
-		else if (strncmp(client_mesg, "/help", 5) == 0)
+		else if (strncmp(client_mesg, "help", 4) == 0)
 		{
 			printf("%s", usage);
 			printf("%s", cmd_line);
@@ -205,3 +174,47 @@ void send_mesg(char *cmd_line, int socket_fd, struct sockaddr_in *address, char 
 		memset(client_mesg, '\0', sizeof(client_mesg));
 	}
 }
+int main(int argc, char **argv)
+{
+    long port = strtol(argv[2], NULL, 10);
+    struct sockaddr_in address, client_addr;
+    char *server_addr;
+    char user_name[MAX_USERNAME];
+    char cmd_line[MAX_USERNAME + 1];
+
+    if(argc < 3)
+    {
+        printf("usage: .\\server.exe <IP> <PORT>\n");
+        exit(0);
+    }
+
+    printf("Please enter your Username : ");
+    scanf("%s", user_name);
+    strcpy(cmd_line, user_name);
+    strcat(cmd_line, ">");
+
+	bzero(&address, sizeof(address));
+    server_addr = argv[1];
+	address.sin_family = AF_INET;
+	address.sin_addr.s_addr = inet_addr(server_addr);
+	address.sin_port = htons(port);
+	int socket_fd = socket(AF_INET, SOCK_STREAM, 0);
+	server_connect(socket_fd, &address);
+
+    thread_data data;
+    strcpy(data.cmd_line, cmd_line);
+    data.socket_fd = socket_fd;
+
+
+    pthread_t thread;
+	pthread_create(&thread, NULL, (void *)receive_data, (void *)&data);
+
+    send_mesg(cmd_line, socket_fd, &address, user_name);
+
+    printf("closed client\n");
+    close(socket_fd);
+    pthread_exit(NULL);
+    
+    exit(0);
+}
+
